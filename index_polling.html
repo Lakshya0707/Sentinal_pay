@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Sentinel AI – Real-Time Fraud Detection</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Syne:wght@700;800;900&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg0:#060810;--bg1:#0c0f1a;--bg2:#111624;--bg3:#181e2e;
+  --border:rgba(255,255,255,0.06);
+  --c-low:#00e5a0;--c-med:#f5c518;--c-high:#ff8c42;--c-crit:#ff3b5c;--c-maybe:#c084fc;
+  --c-blue:rgba(100,160,255,0.9);--c-blue-dim:rgba(100,160,255,0.15);
+  --text1:#e8ecf4;--text2:rgba(255,255,255,0.55);--text3:rgba(255,255,255,0.25);
+  --font-mono:'JetBrains Mono',monospace;--font-head:'Syne',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg0);color:var(--text1);font-family:var(--font-mono);font-size:12px;overflow-x:hidden;
+  background-image:radial-gradient(ellipse 70% 50% at 50% -10%,rgba(0,80,200,0.08) 0%,transparent 70%),
+    radial-gradient(ellipse 40% 40% at 90% 90%,rgba(255,59,92,0.05) 0%,transparent 60%);}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
+
+/* HEADER */
+#header{position:sticky;top:0;z-index:200;background:rgba(6,8,16,0.97);
+  backdrop-filter:blur(20px);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;padding:10px 24px;}
+.logo{display:flex;align-items:center;gap:12px;}
+.logo-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#ff3b5c,#ff8c42);
+  display:flex;align-items:center;justify-content:center;font-size:16px;}
+.logo-text{font-family:var(--font-head);font-size:16px;font-weight:900;letter-spacing:-0.02em;color:#fff;}
+.logo-sub{font-size:7px;color:var(--text3);letter-spacing:.22em;margin-top:1px;}
+.live-pill{display:flex;align-items:center;gap:6px;background:rgba(0,229,160,0.1);
+  padding:4px 12px;border-radius:20px;border:1px solid rgba(0,229,160,0.25);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--c-low);}
+.live-dot.running{animation:pulse 1.4s infinite;}
+.live-text{font-size:8px;font-weight:700;letter-spacing:.12em;color:var(--c-low);}
+.header-btns{display:flex;gap:8px;align-items:center;}
+.btn{cursor:pointer;border:none;font-family:var(--font-mono);font-size:9px;font-weight:700;
+  letter-spacing:.1em;padding:6px 14px;border-radius:4px;transition:all .2s;}
+.btn:hover{opacity:.8;transform:translateY(-1px);}
+.btn-pause{background:rgba(255,59,92,0.15);color:#ff3b5c;border:1px solid rgba(255,59,92,0.3);}
+.btn-fraud{background:rgba(255,140,66,0.15);color:#ff8c42;border:1px solid rgba(255,140,66,0.3);}
+.btn-info{background:var(--c-blue-dim);color:var(--c-blue);border:1px solid rgba(100,160,255,0.3);}
+.btn-admin{background:rgba(192,132,252,0.15);color:#c084fc;border:1px solid rgba(192,132,252,0.3);}
+
+/* STATS STRIP */
+#stats-strip{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);}
+.stat-card{padding:12px 16px;border-right:1px solid var(--border);background:rgba(8,11,18,0.7);}
+.stat-card:last-child{border-right:none;}
+.stat-label{font-size:7px;color:var(--text3);letter-spacing:.18em;text-transform:uppercase;margin-bottom:5px;}
+.stat-value{font-family:var(--font-head);font-size:20px;font-weight:900;letter-spacing:-.02em;}
+.stat-sub{font-size:8px;color:var(--text3);margin-top:2px;}
+
+/* FILTERS BAR */
+#filter-bar{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.15);}
+.filter-label{font-size:8px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;}
+.filter-input{background:var(--bg3);border:1px solid rgba(255,255,255,0.08);color:var(--text1);
+  font-family:var(--font-mono);font-size:10px;padding:5px 10px;border-radius:4px;outline:none;transition:border .2s;}
+.filter-input:focus{border-color:rgba(100,160,255,0.4);}
+.filter-input option{background:#111624;}
+.filter-sep{width:1px;height:20px;background:var(--border);}
+.btn-clear{background:rgba(255,59,92,0.1);color:#ff3b5c;border:1px solid rgba(255,59,92,0.2);
+  font-size:8px;padding:4px 10px;border-radius:4px;cursor:pointer;font-family:var(--font-mono);}
+.filter-count{font-size:9px;color:var(--text3);}
+.name-opt{padding:6px 10px;font-size:10px;cursor:pointer;color:var(--text1);transition:background .15s;}
+.name-opt:hover{background:var(--c-blue-dim);color:var(--c-blue);}
+
+/* MAIN GRID */
+#main{display:grid;grid-template-columns:1fr 370px;height:calc(100vh - 175px);overflow:hidden;}
+
+/* LEFT PANEL */
+#left{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;}
+.tab-bar{display:flex;gap:4px;padding:9px 14px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);}
+.tab{cursor:pointer;padding:5px 12px;border-radius:4px;font-size:9px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;transition:all .2s;color:var(--text3);}
+.tab.active{background:var(--c-blue-dim);color:var(--c-blue);}
+.tab-content{flex:1;overflow:hidden;display:none;}
+.tab-content.active{display:flex;flex-direction:column;}
+
+/* TRANSACTION TABLE */
+.tbl-head{display:grid;grid-template-columns:95px 130px 90px 110px 90px 100px 100px;
+  gap:0;padding:6px 14px;border-bottom:1px solid rgba(255,255,255,0.04);background:rgba(0,0,0,0.18);}
+.tbl-head span{font-size:7px;color:var(--text3);letter-spacing:.18em;text-transform:uppercase;}
+#tx-list{overflow-y:auto;flex:1;}
+.tx-row{display:grid;grid-template-columns:95px 130px 90px 110px 90px 100px 100px;
+  gap:0;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.025);
+  cursor:pointer;transition:background .15s;border-left:2px solid transparent;}
+.tx-row:hover{background:rgba(255,255,255,0.025);}
+.tx-row.selected{background:rgba(100,160,255,0.07);border-left-color:rgba(100,160,255,0.4);}
+.tx-row.new{animation:slideIn .3s ease;}
+.tx-row.crit{border-left-color:var(--c-crit);}
+.tx-row.high{border-left-color:var(--c-high);}
+.tx-row.med{border-left-color:var(--c-med);}
+.tx-row.maybe{border-left-color:var(--c-maybe);}
+.tx-name{font-size:10px;color:var(--text1);font-weight:500;}
+.tx-sub{font-size:7px;color:var(--text3);margin-top:1px;}
+.badge{display:inline-block;font-size:7px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.06em;}
+.risk-bar-wrap{display:flex;align-items:center;gap:5px;}
+.risk-bar{flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;}
+.risk-bar-fill{height:100%;border-radius:2px;transition:width .4s;}
+
+/* CHARTS TAB */
+#charts-tab{padding:16px;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.chart-card{background:var(--bg2);border-radius:8px;padding:14px;border:1px solid var(--border);}
+.chart-title{font-size:8px;color:var(--text3);letter-spacing:.15em;text-transform:uppercase;margin-bottom:10px;}
+.chart-card.full{grid-column:1/-1;}
+
+/* ALERTS TAB */
+#alerts-tab{overflow-y:auto;padding:14px;flex:1;}
+.alert-card{padding:12px 14px;border-radius:8px;margin-bottom:8px;cursor:pointer;border:1px solid transparent;transition:all .2s;}
+.alert-card.crit{background:rgba(255,59,92,0.07);border-color:rgba(255,59,92,0.2);animation:alertGlow 2.5s infinite;}
+.alert-card.high{background:rgba(255,140,66,0.07);border-color:rgba(255,140,66,0.2);}
+.alert-card.maybe{background:rgba(192,132,252,0.07);border-color:rgba(192,132,252,0.2);}
+.alert-title{font-size:10px;font-weight:700;margin-bottom:5px;}
+.alert-detail{font-size:9px;color:var(--text2);margin-bottom:6px;}
+.tag{font-size:7px;font-weight:600;padding:2px 7px;border-radius:3px;letter-spacing:.06em;}
+
+/* RIGHT PANEL */
+#right{overflow-y:auto;background:rgba(0,0,0,0.12);}
+#detail-panel{padding:18px;}
+.section{margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+.section:last-child{border-bottom:none;}
+.section-title{font-size:7px;color:var(--text3);letter-spacing:.18em;text-transform:uppercase;margin-bottom:10px;}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.detail-item{background:var(--bg3);border-radius:5px;padding:8px 10px;}
+.detail-key{font-size:7px;color:var(--text3);letter-spacing:.1em;margin-bottom:3px;}
+.detail-val{font-size:10px;color:var(--text1);font-weight:500;}
+.gauge-wrap{display:flex;justify-content:center;margin:4px 0 10px;}
+.feat-item{margin-bottom:8px;}
+.feat-head{display:flex;justify-content:space-between;margin-bottom:3px;}
+.feat-label{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;}
+.feat-pct{font-size:9px;font-weight:700;}
+.feat-bar{height:4px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;}
+.feat-fill{height:100%;border-radius:2px;transition:width .5s;}
+.decision-box{border-radius:8px;padding:12px 14px;margin-top:4px;}
+.decision-text{font-size:10px;color:var(--text2);line-height:1.65;}
+
+/* MODAL */
+#modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;
+  align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+#modal-overlay.open{display:flex;}
+#modal{background:var(--bg1);border:1px solid var(--border);border-radius:12px;
+  padding:24px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;}
+.modal-title{font-family:var(--font-head);font-size:18px;font-weight:800;margin-bottom:16px;color:#fff;}
+.metric-row{display:flex;justify-content:space-between;padding:6px 10px;
+  background:var(--bg2);border-radius:4px;margin-bottom:4px;}
+.metric-name{font-size:10px;color:var(--text2);}
+.metric-val{font-size:10px;font-weight:700;color:var(--c-low);}
+
+/* EMPTY STATE */
+#empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;color:var(--text3);gap:8px;}
+
+/* ANIMATIONS */
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+@keyframes slideIn{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
+@keyframes alertGlow{0%,100%{box-shadow:0 0 6px rgba(255,59,92,.2);}50%{box-shadow:0 0 18px rgba(255,59,92,.5);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="logo">
+    <div class="logo-icon">🛡️</div>
+    <div>
+      <div class="logo-text">SENTINEL AI</div>
+      <div class="logo-sub">REAL-TIME FRAUD DETECTION SYSTEM</div>
+    </div>
+    <div class="live-pill" style="margin-left:14px;">
+      <div class="live-dot running" id="live-dot"></div>
+      <div class="live-text" id="live-text">LIVE</div>
+    </div>
+  </div>
+  <div class="header-btns">
+    <button class="btn btn-fraud" onclick="injectFraud()">⚡ INJECT FRAUD</button>
+    <button class="btn btn-pause" id="pause-btn" onclick="toggleSim()">⏸ PAUSE</button>
+    <button class="btn btn-info" onclick="openModal()">ℹ MODEL INFO</button>
+    <a href="/admin/login"><button class="btn btn-admin">🔐 ADMIN</button></a>
+  </div>
+</div>
+
+<!-- STATS STRIP -->
+<div id="stats-strip">
+  <div class="stat-card">
+    <div class="stat-label">Total Transactions</div>
+    <div class="stat-value" style="color:var(--c-blue)" id="s-total">0</div>
+    <div class="stat-sub" id="s-det-rate">0% detection rate</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Fraud Detected</div>
+    <div class="stat-value" style="color:var(--c-crit)" id="s-fraud">0</div>
+    <div class="stat-sub">flagged transactions</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Might Be Fraud</div>
+    <div class="stat-value" style="color:var(--c-maybe)" id="s-maybe">0</div>
+    <div class="stat-sub">under review</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Auto Blocked</div>
+    <div class="stat-value" style="color:var(--c-high)" id="s-blocked">0</div>
+    <div class="stat-sub">high risk blocked</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Amount Saved</div>
+    <div class="stat-value" style="color:var(--c-low);font-size:16px;" id="s-saved">₹0</div>
+    <div class="stat-sub">fraud prevented</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Model Accuracy</div>
+    <div class="stat-value" style="color:var(--c-low)" id="s-acc">—</div>
+    <div class="stat-sub">on test set</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">ROC-AUC</div>
+    <div class="stat-value" style="color:var(--c-med)" id="s-auc">—</div>
+    <div class="stat-sub">model score</div>
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<div id="filter-bar">
+  <span class="filter-label">🔍 Name:</span>
+  <!-- Searchable name input -->
+  <div style="position:relative;width:180px;" id="name-wrap">
+    <input type="text" id="f-name-input" placeholder="Search customer..." autocomplete="off"
+      style="width:100%;background:var(--bg3);border:1px solid rgba(255,255,255,0.08);color:var(--text1);font-family:var(--font-mono);font-size:10px;padding:5px 10px;border-radius:4px;outline:none;"
+      oninput="onNameSearch()" onfocus="showNameDrop()" onblur="hideNameDrop()"/>
+    <div id="name-dropdown" style="display:none;position:absolute;top:100%;left:0;width:100%;max-height:200px;overflow-y:auto;background:var(--bg2);border:1px solid rgba(255,255,255,0.1);border-radius:4px;z-index:300;margin-top:2px;"></div>
+  </div>
+  <button class="btn-clear" id="name-clear-btn" onclick="clearName()" style="display:none;padding:4px 8px;font-size:8px;">✕</button>
+  <div style="width:1px;height:20px;background:var(--border);"></div>
+  <span class="filter-label">⏱ Time:</span>
+  <!-- Manual HH MM SS inputs -->
+  <div style="display:flex;align-items:center;gap:4px;">
+    <input type="number" id="t-sh" min="0" max="23" placeholder="HH" style="width:38px;background:var(--bg3);border:1px solid rgba(255,255,255,0.08);color:var(--text1);font-family:var(--font-mono);font-size:10px;padding:5px 6px;border-radius:4px;outline:none;text-align:center;" oninput="applyFilters()"/>
+    <span style="color:var(--text3);">:</span>
+    <input type="number" id="t-sm" min="0" max="59" placeholder="MM" style="width:38px;background:var(--bg3);border:1px solid rgba(255,255,255,0.08);color:var(--text1);font-family:var(--font-mono);font-size:10px;padding:5px 6px;border-radius:4px;outline:none;text-align:center;" oninput="applyFilters()"/>
+    <span style="color:var(--text3);">:</span>
+    <input type="number" id="t-ss" min="0" max="59" placeholder="SS" style="width:38px;background:var(--bg3);border:1px solid rgba(255,255,255,0.08);color:var(--text1);font-family:var(--font-mono);font-size:10px;padding:5px 6px;border-radius:4px;outline:none;text-align:center;" oninput="applyFilters()"/>
+  </div>
+  <span style="color:var(--text3);font-size:9px;">to</span>
+  <div style="display:flex;align-items:center;gap:4px;">
+    <input type="number" id="t-eh" min="0" max="23" placeholder="HH" style="width:38px;background:var(--bg3);border:1px solid rgba(255,255,255,0.08);color:var(--text1);font-family:var(--font-mono);font-size:10px;padding:5px 6px;border-radius:4px;outline:none;text-align:center;" oninput="applyFilters()"/>
+    <span style="color:var(--text3);">:</span>
+    <input type="number" id="t-em" min="0" max="59" placeholder="MM" style="width:38px;background:var(--bg3);border:1px solid rgba(255,255,255,0.08);color:var(--text1);font-family:var(--font-mono);font-size:10px;padding:5px 6px;border-radius:4px;outline:none;text-align:center;" oninput="applyFilters()"/>
+    <span style="color:var(--text3);">:</span>
+    <input type="number" id="t-es" min="0" max="59" placeholder="SS" style="width:38px;background:var(--bg3);border:1px solid rgba(255,255,255,0.08);color:var(--text1);font-family:var(--font-mono);font-size:10px;padding:5px 6px;border-radius:4px;outline:none;text-align:center;" oninput="applyFilters()"/>
+  </div>
+  <button class="btn-clear" onclick="clearFilters()">✕ Clear</button>
+  <span style="font-size:9px;color:var(--text3);" id="f-count"></span>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- LEFT -->
+  <div id="left">
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab('feed')">Live Feed</div>
+      <div class="tab" onclick="switchTab('charts')">Charts</div>
+      <div class="tab" onclick="switchTab('alerts')">Alerts<span id="alert-badge"></span></div>
+    </div>
+
+    <!-- FEED TAB -->
+    <div class="tab-content active" id="tab-feed">
+      <div class="tbl-head">
+        <span>Time</span>
+        <span>Customer</span>
+        <span>Payment</span>
+        <span>Merchant</span>
+        <span>Amount</span>
+        <span>Risk Score</span>
+        <span>Status</span>
+      </div>
+      <div id="tx-list"></div>
+    </div>
+
+    <!-- CHARTS TAB -->
+    <div class="tab-content" id="tab-charts" style="display:none;">
+      <div id="charts-tab">
+        <div class="chart-card full">
+          <div class="chart-title">Fraud Risk Score Trend (Last 60 Transactions)</div>
+          <canvas id="c-trend" height="80"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Fraud by Payment Type</div>
+          <canvas id="c-ptype" height="120"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Risk Distribution</div>
+          <canvas id="c-risk" height="120"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Transaction Volume (Last 12 min)</div>
+          <canvas id="c-vol" height="100"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Top Fraud Merchants</div>
+          <canvas id="c-merch" height="100"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALERTS TAB -->
+    <div class="tab-content" id="tab-alerts" style="display:none;">
+      <div id="alerts-tab">
+        <div style="color:var(--text3);text-align:center;padding:30px;font-size:10px;">No alerts yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: DETAIL PANEL -->
+  <div id="right">
+    <div id="detail-panel">
+      <div id="empty-state">
+        <div style="font-size:32px;">🛡️</div>
+        <div style="font-size:11px;font-weight:600;">Select a transaction</div>
+        <div style="font-size:9px;">Click any row to view details</div>
+      </div>
+      <div id="detail-content" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODEL INFO MODAL -->
+<div id="modal-overlay" onclick="closeModal()">
+  <div id="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">🛡️ Model Information</div>
+    <div style="margin-bottom:14px;">
+      <div style="font-size:8px;color:var(--text3);letter-spacing:.18em;margin-bottom:8px;">ARCHITECTURE</div>
+      <div class="metric-row"><span class="metric-name">Model Type</span><span class="metric-val">Voting Ensemble</span></div>
+      <div class="metric-row"><span class="metric-name">Classifiers</span><span class="metric-val">GBM + RF + Logistic</span></div>
+      <div class="metric-row"><span class="metric-name">Weights</span><span class="metric-val">3 : 2 : 1</span></div>
+      <div class="metric-row"><span class="metric-name">Training Data</span><span class="metric-val">50,000 transactions</span></div>
+      <div class="metric-row"><span class="metric-name">Balancing</span><span class="metric-val">Oversampling (5% fraud)</span></div>
+    </div>
+    <div style="margin-bottom:14px;" id="modal-metrics"></div>
+    <div>
+      <div style="font-size:8px;color:var(--text3);letter-spacing:.18em;margin-bottom:8px;">DECISION THRESHOLDS</div>
+      <div class="metric-row"><span class="metric-name" style="color:#00e5a0;">✅ APPROVED</span><span class="metric-val">Score &lt; 50</span></div>
+      <div class="metric-row"><span class="metric-name" style="color:#c084fc;">⚠️ MIGHT BE FRAUD</span><span class="metric-val">Score 50–70</span></div>
+      <div class="metric-row"><span class="metric-name" style="color:#ff3b5c;">🚫 BLOCKED</span><span class="metric-val">Score &gt; 70</span></div>
+    </div>
+    <div style="margin-top:14px;">
+      <div style="font-size:8px;color:var(--text3);letter-spacing:.18em;margin-bottom:8px;">FEATURES USED (16)</div>
+      <div style="font-size:9px;color:var(--text2);line-height:1.8;">
+        payment_type · merchant_category · amount · hour · day_of_week · velocity · mins_since_last_txn · failed_attempts · is_vpn · is_new_device · is_intl_txn · is_upi_new_payee · is_first_time_payee · is_odd_hour · user_avg_amount · amount_vs_avg_ratio
+      </div>
+    </div>
+    <button onclick="closeModal()" style="margin-top:16px;width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border);color:var(--text1);border-radius:6px;cursor:pointer;font-family:var(--font-mono);font-size:10px;">CLOSE</button>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let allTx         = [];
+let filteredTx    = [];
+let selectedId    = null;
+let alerts        = [];
+let simRunning    = true;
+let scoreHistory  = [];
+let riskCounts    = {};
+let ptypeFraud    = {};
+let merchantFraud = {};
+let statusCounts  = {APPROVED:0, MIGHT_BE_FRAUD:0, BLOCKED:0};
+let volData       = Array(12).fill(0);
+let lastPollCount = 0;
+
+const COLOR = {LOW:"#00e5a0",MEDIUM:"#f5c518",HIGH:"#ff8c42",CRITICAL:"#ff3b5c"};
+const STATUS_COLOR = {APPROVED:"#00e5a0",MIGHT_BE_FRAUD:"#c084fc",BLOCKED:"#ff3b5c",REVIEW:"#f5c518"};
+
+// ── POLLING (FIX: use timestamp_ms to detect new txns) ────────────────────
+let lastTimestampMs = 0;
+
+async function pollData(){
+  try{
+    const startTime = getTimeStr('t-sh','t-sm','t-ss');
+    const endTime   = getTimeStr('t-eh','t-em','t-es');
+
+    let url = `/api/transactions?limit=200`;
+    if(activeNameFilter) url += `&name=${encodeURIComponent(activeNameFilter)}`;
+    if(startTime && endTime) url += `&start_time=${startTime}&end_time=${endTime}`;
+
+    const txRes  = await fetch(url);
+    const newTxs = await txRes.json();
+
+    // Detect genuinely new transactions via timestamp_ms
+    const freshTxs = newTxs.filter(t => t.timestamp_ms > lastTimestampMs);
+    if(freshTxs.length > 0){
+      lastTimestampMs = Math.max(...newTxs.map(t => t.timestamp_ms || 0));
+      freshTxs.forEach(tx => {
+        processTx(tx);
+        if(tx.is_fraud || tx.fraud_score >= 50) addAlert(tx);
+      });
+    }
+
+    filteredTx = newTxs;
+    renderTable();
+    updateCharts();
+
+    const statsRes = await fetch('/api/stats');
+    const stats    = await statsRes.json();
+    updateStats(stats);
+
+    document.getElementById('f-count').textContent =
+      filteredTx.length > 0 ? `${filteredTx.length} txns shown` : '';
+
+  }catch(e){ console.error('Poll error:', e); }
+}
+
+setInterval(pollData, 2000);
+
+// ── STATS ──────────────────────────────────────────────────────────────────
+function updateStats(s){
+  document.getElementById('s-total').textContent    = s.total.toLocaleString();
+  document.getElementById('s-fraud').textContent    = s.fraud.toLocaleString();
+  document.getElementById('s-maybe').textContent    = (s.maybe_fraud||0).toLocaleString();
+  document.getElementById('s-blocked').textContent  = s.blocked.toLocaleString();
+  document.getElementById('s-saved').textContent    = fmt(s.saved_amount||0);
+  document.getElementById('s-det-rate').textContent = s.detection_rate + '% detection rate';
+  document.getElementById('s-acc').textContent      = s.model_accuracy + '%';
+  document.getElementById('s-auc').textContent      = s.model_auc + '%';
+}
+
+function fmt(n){ return '₹' + n.toLocaleString('en-IN', {maximumFractionDigits:0}); }
+
+// ── PROCESS TX ────────────────────────────────────────────────────────────
+function processTx(tx){
+  scoreHistory.push(tx.fraud_score);
+  if(scoreHistory.length > 60) scoreHistory.shift();
+  riskCounts[tx.risk_level] = (riskCounts[tx.risk_level]||0) + 1;
+  statusCounts[tx.status]   = (statusCounts[tx.status]||0) + 1;
+  if(tx.is_fraud){
+    ptypeFraud[tx.payment_type]           = (ptypeFraud[tx.payment_type]||0) + 1;
+    merchantFraud[tx.merchant_category]   = (merchantFraud[tx.merchant_category]||0) + 1;
+  }
+  volData[new Date().getMinutes() % 12]++;
+}
+
+// ── TABLE ─────────────────────────────────────────────────────────────────
+function renderTable(){
+  const list = document.getElementById('tx-list');
+  if(filteredTx.length === 0){
+    list.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:10px;">No transactions found</div>';
+    return;
+  }
+  const rows = filteredTx.slice(0,200).map(tx => {
+    const col  = STATUS_COLOR[tx.status] || COLOR[tx.risk_level] || '#888';
+    const cls  = tx.status==='BLOCKED'?'crit':tx.status==='MIGHT_BE_FRAUD'?'maybe':tx.risk_level==='HIGH'?'high':tx.risk_level==='MEDIUM'?'med':'';
+    const sel  = tx.id === selectedId ? ' selected' : '';
+    const t    = tx.timestamp ? tx.timestamp.slice(11,19) : '--:--:--';
+    const statusLabel = tx.status==='BLOCKED'?'BLOCKED':tx.status==='MIGHT_BE_FRAUD'?'SUSPICIOUS':tx.status==='APPROVED'?'APPROVED':'REVIEW';
+    return `<div class="tx-row ${cls}${sel}" onclick="selectTx('${tx.id}')">
+      <span style="color:var(--text3);font-size:9px;">${t}</span>
+      <div><div class="tx-name">${tx.cardholder}</div>
+           <div class="tx-sub">${tx.bank||''}</div></div>
+      <span><span class="badge" style="background:var(--c-blue-dim);color:var(--c-blue)">${tx.payment_type}</span></span>
+      <span style="color:var(--text2);font-size:10px;">${tx.merchant_category}</span>
+      <span style="color:var(--text1);font-weight:600;font-size:10px;">${fmt(tx.amount)}</span>
+      <div class="risk-bar-wrap">
+        <div class="risk-bar"><div class="risk-bar-fill" style="width:${tx.fraud_score}%;background:${col}"></div></div>
+        <span style="font-size:10px;color:${col};font-weight:700;min-width:28px">${tx.fraud_score}</span>
+      </div>
+      <span><span class="badge" style="background:${col}18;color:${col};border:1px solid ${col}30">${statusLabel}</span></span>
+    </div>`;
+  });
+  list.innerHTML = rows.join('');
+}
+
+// ── DETAIL VIEW ────────────────────────────────────────────────────────────
+function selectTx(id){
+  selectedId = id;
+  const tx = filteredTx.find(t => t.id === id) || allTx.find(t => t.id === id);
+  if(!tx) return;
+  renderTable();
+  document.getElementById('empty-state').style.display   = 'none';
+  document.getElementById('detail-content').style.display = 'block';
+  const col = STATUS_COLOR[tx.status] || COLOR[tx.risk_level];
+
+  const statusLabel = tx.status==='BLOCKED'?'🚫 BLOCKED':tx.status==='MIGHT_BE_FRAUD'?'⚠️ MIGHT BE FRAUD':tx.status==='APPROVED'?'✅ APPROVED':'🔍 REVIEW';
+  const flags = [];
+  if(tx.is_new_device) flags.push(`<span class="tag" style="background:rgba(255,140,66,.15);color:#ff8c42">NEW DEVICE</span>`);
+  if(tx.is_vpn)        flags.push(`<span class="tag" style="background:rgba(255,59,92,.15);color:#ff3b5c">VPN/PROXY</span>`);
+  if(tx.is_intl)       flags.push(`<span class="tag" style="background:rgba(245,197,24,.12);color:#f5c518">INTL TXN</span>`);
+  if(tx.is_odd_hour)   flags.push(`<span class="tag" style="background:rgba(192,132,252,.15);color:#c084fc">ODD HOUR</span>`);
+  if(tx.blocked)       flags.push(`<span class="tag" style="background:rgba(255,59,92,.2);color:#ff3b5c">🚫 BLOCKED</span>`);
+
+  const decision = tx.status==='BLOCKED'
+    ? '🚫 Transaction automatically blocked. Score ≥ 70. Cardholder notified. Escalated to fraud team.'
+    : tx.status==='MIGHT_BE_FRAUD'
+    ? '⚠️ Suspicious transaction flagged for review. Score 50–70. Additional authentication recommended before processing.'
+    : tx.fraud_score >= 35
+    ? '🔍 Moderate risk. Transaction approved with enhanced monitoring.'
+    : '✅ Transaction approved. Risk within normal parameters. No anomalous patterns detected.';
+
+  const upiLine  = tx.upi_id     ? `<div class="detail-item"><div class="detail-key">UPI ID</div><div class="detail-val" style="font-size:9px">${tx.upi_id}</div></div>` : '';
+  const cardLine = tx.card_number ? `<div class="detail-item"><div class="detail-key">CARD</div><div class="detail-val">${tx.card_number}</div></div>` : '';
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="section" style="border-bottom:none;margin-bottom:4px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+        <div>
+          <div style="font-size:7px;color:var(--text3);letter-spacing:.18em;margin-bottom:2px;">TRANSACTION DETAIL</div>
+          <div style="font-family:var(--font-head);font-size:13px;font-weight:800;color:#fff">${tx.id}</div>
+        </div>
+        <span class="badge" style="background:${col}18;color:${col};border:1px solid ${col}30;font-size:8px;padding:3px 10px;">${statusLabel}</span>
+      </div>
+      <div style="font-size:8px;color:var(--text3)">${tx.timestamp || ''}</div>
+    </div>
+
+    ${buildGauge(tx.fraud_score, col)}
+
+    <div class="section">
+      <div class="section-title">Transaction Info</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-key">CARDHOLDER</div><div class="detail-val">${tx.cardholder}</div></div>
+        <div class="detail-item"><div class="detail-key">PAYMENT TYPE</div><div class="detail-val" style="color:var(--c-blue)">${tx.payment_type}</div></div>
+        <div class="detail-item"><div class="detail-key">AMOUNT</div><div class="detail-val" style="font-size:13px;font-weight:700">${fmt(tx.amount)}</div></div>
+        <div class="detail-item"><div class="detail-key">MERCHANT</div><div class="detail-val">${tx.merchant_category}</div></div>
+        <div class="detail-item"><div class="detail-key">BANK</div><div class="detail-val">${tx.bank||'—'}</div></div>
+        <div class="detail-item"><div class="detail-key">USER AVG AMT</div><div class="detail-val">${fmt(tx.user_avg_amount||0)}</div></div>
+        <div class="detail-item"><div class="detail-key">AMT vs AVG</div><div class="detail-val" style="color:${(tx.amount_vs_avg_ratio||1)>3?'#ff3b5c':'#00e5a0'}">${(tx.amount_vs_avg_ratio||0).toFixed(2)}x</div></div>
+        <div class="detail-item"><div class="detail-key">VELOCITY</div><div class="detail-val">${tx.velocity} txns/hr</div></div>
+        ${upiLine}${cardLine}
+      </div>
+      ${flags.length ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:10px;">${flags.join('')}</div>` : ''}
+    </div>
+
+    <div class="section">
+      <div class="section-title">Risk Feature Breakdown</div>
+      ${buildFeatureBars(tx)}
+    </div>
+
+    <div class="decision-box" style="background:${col}0e;border:1px solid ${col}25;">
+      <div class="section-title" style="margin-bottom:6px;">Decision Engine</div>
+      <div class="decision-text">${decision}</div>
+    </div>`;
+}
+
+function buildGauge(score, col){
+  const r=54, cx=140, cy=70, circ=Math.PI*r;
+  const off   = circ*(1-score/100);
+  const angle = (score/100)*180-90;
+  const nx    = cx+42*Math.cos(angle*Math.PI/180);
+  const ny    = cy+42*Math.sin(angle*Math.PI/180);
+  return `<div class="gauge-wrap">
+  <svg width="280" height="84" viewBox="0 0 280 84">
+    <defs><linearGradient id="g${score}" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00e5a0"/><stop offset="40%" stop-color="#f5c518"/>
+      <stop offset="70%" stop-color="#ff8c42"/><stop offset="100%" stop-color="#ff3b5c"/>
+    </linearGradient></defs>
+    <path d="M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="8" stroke-linecap="round"/>
+    <path d="M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}" fill="none" stroke="url(#g${score})" stroke-width="8" stroke-linecap="round"
+      stroke-dasharray="${circ}" stroke-dashoffset="${off}"/>
+    <line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="${col}" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="5" fill="${col}"/>
+    <text x="${cx}" y="${cy+26}" text-anchor="middle" fill="${col}" font-size="24" font-weight="800" font-family="Syne,sans-serif">${score}</text>
+    <text x="${cx}" y="${cy+38}" text-anchor="middle" fill="rgba(255,255,255,.3)" font-size="7" font-family="JetBrains Mono,monospace">FRAUD RISK SCORE</text>
+  </svg></div>`;
+}
+
+function buildFeatureBars(tx){
+  const feats = [
+    {label:"Amount vs Avg",  val: Math.min((tx.amount_vs_avg_ratio||1)/10, 1)},
+    {label:"Velocity",       val: Math.min((tx.velocity||1)/15, 1)},
+    {label:"Mins Gap (inv)", val: Math.max(0, 1 - Math.min((tx.mins_since_last_txn||120)/120, 1))},
+    {label:"Odd Hour",       val: tx.is_odd_hour ? 0.85 : 0.05},
+    {label:"New Device",     val: tx.is_new_device ? 0.80 : 0.05},
+    {label:"VPN/Proxy",      val: tx.is_vpn ? 0.75 : 0.05},
+    {label:"Intl Trans.",    val: tx.is_intl ? 0.70 : 0.05},
+    {label:"Failed Att.",    val: Math.min((tx.failed_attempts||0)/5, 1)},
+  ];
+  return feats.map(f => {
+    const pct = Math.round(f.val*100);
+    const col = f.val>0.6?'#ff3b5c':f.val>0.35?'#ff8c42':f.val>0.15?'#f5c518':'#00e5a0';
+    return `<div class="feat-item">
+      <div class="feat-head"><span class="feat-label">${f.label}</span><span class="feat-pct" style="color:${col}">${pct}%</span></div>
+      <div class="feat-bar"><div class="feat-fill" style="width:${pct}%;background:${col};box-shadow:0 0 6px ${col}60"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ── ALERTS ────────────────────────────────────────────────────────────────
+function addAlert(tx){
+  if(alerts.find(a => a.id === tx.id)) return;
+  alerts.unshift(tx);
+  if(alerts.length > 30) alerts.pop();
+  document.getElementById('alert-badge').textContent = ` (${alerts.length})`;
+  const div = document.getElementById('alerts-tab');
+  div.innerHTML = alerts.map(t => {
+    const col = t.status==='BLOCKED'?'#ff3b5c':t.status==='MIGHT_BE_FRAUD'?'#c084fc':'#ff8c42';
+    const cls = t.status==='BLOCKED'?'crit':t.status==='MIGHT_BE_FRAUD'?'maybe':'high';
+    const label = t.status==='BLOCKED'?'🚫 AUTO-BLOCKED':t.status==='MIGHT_BE_FRAUD'?'⚠️ MIGHT BE FRAUD':'⚠️ HIGH RISK';
+    const tags = [];
+    if(t.is_new_device) tags.push(`<span class="tag" style="background:rgba(255,140,66,.15);color:#ff8c42">NEW DEVICE</span>`);
+    if(t.is_vpn)        tags.push(`<span class="tag" style="background:rgba(255,59,92,.15);color:#ff3b5c">VPN</span>`);
+    if(t.is_intl)       tags.push(`<span class="tag" style="background:rgba(245,197,24,.12);color:#f5c518">INTL</span>`);
+    return `<div class="alert-card ${cls}" onclick="selectTx('${t.id}')">
+      <div class="alert-title" style="color:${col}">${label} — ${t.id}</div>
+      <div class="alert-detail">${t.cardholder} · ${t.payment_type} · ${fmt(t.amount)} · ${t.merchant_category}</div>
+      <div class="alert-detail" style="font-size:8px;color:var(--text3)">${t.timestamp||''}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+        <div style="display:flex;gap:5px;">${tags.join('')}</div>
+        <span style="font-size:9px;color:${col};font-weight:700;">Score: ${t.fraud_score}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── CHARTS ────────────────────────────────────────────────────────────────
+let charts = {};
+const CD = {responsive:true,plugins:{legend:{display:false},
+  tooltip:{backgroundColor:'rgba(17,22,36,.95)',titleColor:'#e8ecf4',bodyColor:'rgba(255,255,255,.6)',
+    borderColor:'rgba(255,255,255,.08)',borderWidth:1}}};
+
+function initCharts(){
+  const font = {color:'rgba(255,255,255,.35)',family:'JetBrains Mono',size:9};
+
+  charts.trend = new Chart(document.getElementById('c-trend'),{type:'line',
+    data:{labels:[],datasets:[{data:[],borderColor:'#ff3b5c',backgroundColor:'rgba(255,59,92,.1)',
+      fill:true,tension:0.4,borderWidth:1.5,pointRadius:0}]},
+    options:{...CD,scales:{x:{ticks:{color:font.color,font:{family:font.family,size:font.size}},grid:{color:'rgba(255,255,255,.04)'}},
+      y:{min:0,max:100,ticks:{color:font.color,font:{family:font.family,size:font.size}},grid:{color:'rgba(255,255,255,.04)'}}}}});
+
+  charts.ptype = new Chart(document.getElementById('c-ptype'),{type:'bar',
+    data:{labels:['UPI','Credit Card','Debit Card','Net Banking','Wallet'],
+      datasets:[{data:[0,0,0,0,0],backgroundColor:['rgba(0,229,160,.7)','rgba(255,59,92,.7)','rgba(255,140,66,.7)','rgba(100,160,255,.7)','rgba(245,197,24,.7)'],borderRadius:4}]},
+    options:{...CD,scales:{x:{ticks:{color:font.color,font:{family:font.family,size:font.size}},grid:{display:false}},
+      y:{ticks:{color:font.color,font:{family:font.family,size:font.size}},grid:{color:'rgba(255,255,255,.04)'}}}}});
+
+  charts.risk = new Chart(document.getElementById('c-risk'),{type:'doughnut',
+    data:{labels:['APPROVED','MIGHT BE FRAUD','BLOCKED','REVIEW'],
+      datasets:[{data:[0,0,0,0],backgroundColor:['rgba(0,229,160,.75)','rgba(192,132,252,.75)','rgba(255,59,92,.75)','rgba(245,197,24,.75)'],borderWidth:0}]},
+    options:{...CD,plugins:{...CD.plugins,legend:{display:true,position:'right',
+      labels:{color:'rgba(255,255,255,.5)',font:{family:font.family,size:9}}}},cutout:'65%'}});
+
+  charts.vol = new Chart(document.getElementById('c-vol'),{type:'bar',
+    data:{labels:Array.from({length:12},(_,i)=>`-${11-i}m`),
+      datasets:[{data:volData,backgroundColor:'rgba(100,160,255,.6)',borderRadius:3}]},
+    options:{...CD,scales:{x:{ticks:{color:font.color,font:{family:font.family,size:font.size}},grid:{display:false}},
+      y:{ticks:{color:font.color,font:{family:font.family,size:font.size}},grid:{color:'rgba(255,255,255,.04)'}}}}});
+
+  charts.merch = new Chart(document.getElementById('c-merch'),{type:'bar',
+    data:{labels:[],datasets:[{data:[],backgroundColor:'rgba(255,59,92,.7)',borderRadius:3}]},
+    options:{...CD,indexAxis:'y',scales:{
+      x:{ticks:{color:font.color,font:{family:font.family,size:font.size}},grid:{color:'rgba(255,255,255,.04)'}},
+      y:{ticks:{color:font.color,font:{family:font.family,size:font.size}},grid:{display:false}}}}});
+}
+
+function updateCharts(){
+  if(!charts.trend) return;
+
+  charts.trend.data.labels   = scoreHistory.map((_,i) => i+1+'');
+  charts.trend.data.datasets[0].data = scoreHistory;
+  charts.trend.update('none');
+
+  const ptypes = ['UPI','Credit Card','Debit Card','Net Banking','Wallet'];
+  charts.ptype.data.datasets[0].data = ptypes.map(p => ptypeFraud[p]||0);
+  charts.ptype.update('none');
+
+  charts.risk.data.datasets[0].data = [
+    statusCounts.APPROVED||0, statusCounts.MIGHT_BE_FRAUD||0,
+    statusCounts.BLOCKED||0, statusCounts.REVIEW||0
+  ];
+  charts.risk.update('none');
+
+  charts.vol.data.datasets[0].data = [...volData];
+  charts.vol.update('none');
+
+  const top = Object.entries(merchantFraud).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  charts.merch.data.labels   = top.map(e=>e[0]);
+  charts.merch.data.datasets[0].data = top.map(e=>e[1]);
+  charts.merch.update('none');
+}
+
+// ── FILTERS ───────────────────────────────────────────────────────────────
+let allCustomerNames = [];
+let activeNameFilter = '';
+
+function applyFilters(){ pollData(); }
+
+function getTimeStr(h,m,s){
+  const hh = document.getElementById(h).value;
+  const mm = document.getElementById(m).value;
+  const ss = document.getElementById(s).value;
+  if(hh===''&&mm===''&&ss==='') return '';
+  return String(hh||0).padStart(2,'0')+':'+String(mm||0).padStart(2,'0')+':'+String(ss||0).padStart(2,'0');
+}
+
+function clearFilters(){
+  activeNameFilter = '';
+  document.getElementById('f-name-input').value = '';
+  document.getElementById('name-clear-btn').style.display = 'none';
+  ['t-sh','t-sm','t-ss','t-eh','t-em','t-es'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-count').textContent = '';
+  pollData();
+}
+
+function clearName(){
+  activeNameFilter = '';
+  document.getElementById('f-name-input').value = '';
+  document.getElementById('name-clear-btn').style.display = 'none';
+  pollData();
+}
+
+// Searchable name dropdown
+function onNameSearch(){
+  const q = document.getElementById('f-name-input').value.toLowerCase();
+  renderNameDrop(q);
+  document.getElementById('name-dropdown').style.display = 'block';
+  if(!q){ activeNameFilter=''; document.getElementById('name-clear-btn').style.display='none'; pollData(); }
+}
+
+function showNameDrop(){
+  renderNameDrop(document.getElementById('f-name-input').value.toLowerCase());
+  document.getElementById('name-dropdown').style.display = 'block';
+}
+
+function hideNameDrop(){
+  setTimeout(()=>{ document.getElementById('name-dropdown').style.display='none'; }, 200);
+}
+
+function renderNameDrop(q){
+  const dd = document.getElementById('name-dropdown');
+  const filtered = q ? allCustomerNames.filter(n=>n.toLowerCase().includes(q)) : allCustomerNames;
+  dd.innerHTML = filtered.map(n =>
+    `<div class="name-opt" onmousedown="selectName('${n}')">${n}</div>`
+  ).join('') || '<div style="padding:8px 10px;color:var(--text3);font-size:9px;">No match</div>';
+}
+
+function selectName(name){
+  activeNameFilter = name;
+  document.getElementById('f-name-input').value = name;
+  document.getElementById('name-clear-btn').style.display = 'inline-block';
+  document.getElementById('name-dropdown').style.display = 'none';
+  pollData();
+}
+
+async function loadCustomerFilter(){
+  try{
+    const r     = await fetch('/api/customers');
+    allCustomerNames = await r.json();
+    renderNameDrop('');
+  }catch(e){ console.log('Could not load customers'); }
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach((el,i) =>
+    el.classList.toggle('active',['feed','charts','alerts'][i]===tab));
+  ['feed','charts','alerts'].forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    el.classList.remove('active');
+    el.style.display = 'none';
+  });
+  const t = document.getElementById('tab-'+tab);
+  t.classList.add('active');
+  t.style.display = 'flex';
+}
+
+// ── CONTROLS ──────────────────────────────────────────────────────────────
+async function toggleSim(){
+  const r = await fetch('/api/simulate/toggle',{method:'POST'});
+  const d = await r.json();
+  simRunning = d.status==='running';
+  document.getElementById('pause-btn').textContent = simRunning ? '⏸ PAUSE' : '▶ RESUME';
+  const dot = document.getElementById('live-dot');
+  const txt = document.getElementById('live-text');
+  if(simRunning){dot.classList.add('running');txt.textContent='LIVE';}
+  else{dot.classList.remove('running');txt.textContent='PAUSED';}
+}
+
+async function injectFraud(){
+  await fetch('/api/simulate/fraud',{method:'POST'});
+  switchTab('alerts');
+  pollData();
+}
+
+function openModal(){
+  fetch('/api/stats').then(r=>r.json()).then(s=>{
+    document.getElementById('modal-metrics').innerHTML = `
+      <div style="font-size:8px;color:var(--text3);letter-spacing:.18em;margin-bottom:8px;">PERFORMANCE METRICS</div>
+      <div class="metric-row"><span class="metric-name">Accuracy</span><span class="metric-val">${s.model_accuracy}%</span></div>
+      <div class="metric-row"><span class="metric-name">ROC-AUC</span><span class="metric-val">${s.model_auc}%</span></div>`;
+  });
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  initCharts();
+  loadCustomerFilter();
+  pollData();
+});
+</script>
+</body>
+</html>

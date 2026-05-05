@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Sentinel Pay — Secure Payment Gateway</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.card{background:#fff;border-radius:20px;width:100%;max-width:560px;box-shadow:0 30px 80px rgba(0,0,0,0.4);overflow:hidden;}
+.card-header{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:22px 28px;display:flex;align-items:center;gap:14px;}
+.shield{width:44px;height:44px;background:linear-gradient(135deg,#e94560,#ff6b35);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;}
+.ht h1{color:#fff;font-size:18px;font-weight:700;}
+.ht p{color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px;}
+.sbadge{margin-left:auto;display:flex;align-items:center;gap:5px;background:rgba(0,255,150,0.1);padding:5px 12px;border-radius:20px;border:1px solid rgba(0,255,150,0.25);}
+.sdot{width:6px;height:6px;background:#00ff96;border-radius:50%;animation:pulse 1.5s infinite;}
+.stext{color:#00ff96;font-size:9px;font-weight:700;letter-spacing:0.1em;}
+.body{padding:26px;}
+.steps{display:flex;align-items:center;margin-bottom:22px;}
+.step{display:flex;align-items:center;gap:6px;}
+.snum{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}
+.step.active .snum{background:#e94560;color:#fff;}
+.step.done .snum{background:#00c87a;color:#fff;}
+.step.inactive .snum{background:#f0f0f0;color:#aaa;}
+.slabel{font-size:11px;font-weight:600;}
+.step.active .slabel{color:#e94560;}
+.step.done .slabel{color:#00c87a;}
+.step.inactive .slabel{color:#aaa;}
+.sline{flex:1;height:2px;background:#f0f0f0;margin:0 10px;}
+.sline.done{background:#00c87a;}
+.sec-label{font-size:10px;font-weight:700;color:#aaa;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f0f0f0;}
+.frow{display:grid;gap:12px;margin-bottom:14px;}
+.frow2{grid-template-columns:1fr 1fr;}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fg label{font-size:11px;font-weight:600;color:#444;}
+.fg input,.fg select{padding:10px 13px;border:1.5px solid #e5e5e5;border-radius:9px;font-size:13px;font-family:inherit;color:#222;background:#fafafa;outline:none;transition:border 0.2s;}
+.fg input:focus,.fg select:focus{border-color:#e94560;background:#fff;}
+.amt-card{background:linear-gradient(135deg,#f8f9ff,#eff4ff);border:1.5px solid #dce8ff;border-radius:12px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+.amt-val{font-size:26px;font-weight:800;color:#1a1a2e;}
+.amt-ratio{font-size:11px;color:#888;margin-top:3px;}
+.cust-info{background:#f0f7ff;border:1.5px solid #c8deff;border-radius:10px;padding:11px 14px;margin-bottom:14px;display:none;align-items:center;gap:12px;}
+.cust-info.show{display:flex;}
+.cavatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#e94560,#ff6b35);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700;flex-shrink:0;}
+.cname{font-size:13px;font-weight:700;color:#1a1a2e;}
+.cmeta{font-size:10px;color:#888;margin-top:2px;}
+.cavg{font-size:11px;font-weight:600;color:#e94560;margin-top:2px;}
+.risk-box{background:#fffbf0;border:1.5px solid #ffe58f;border-radius:12px;padding:16px;margin-bottom:16px;}
+.risk-hdr{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.risk-title{font-size:11px;font-weight:700;color:#b8860b;}
+.toggles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+.tog{background:#fff;border:1.5px solid #eee;border-radius:9px;padding:10px 6px;cursor:pointer;text-align:center;transition:all 0.2s;user-select:none;}
+.tog.on{border-color:#e94560;background:rgba(233,69,96,0.05);}
+.tog-icon{font-size:18px;margin-bottom:3px;}
+.tog-label{font-size:9px;font-weight:600;color:#777;}
+.tog.on .tog-label{color:#e94560;}
+.sliders{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.sl-grp label{font-size:10px;font-weight:600;color:#666;display:block;margin-bottom:4px;}
+.sl-grp input[type=range]{width:100%;accent-color:#e94560;}
+.sl-val{font-size:12px;font-weight:700;color:#e94560;text-align:center;margin-top:2px;}
+.pay-btn{width:100%;padding:15px;background:linear-gradient(135deg,#e94560,#c0392b);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;}
+.pay-btn:hover{transform:translateY(-1px);box-shadow:0 8px 25px rgba(233,69,96,0.4);}
+.pay-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+.result{margin-top:16px;border-radius:14px;padding:18px 20px;display:none;}
+.result.show{display:block;animation:fadeIn 0.3s ease;}
+.result.approved{background:#f0fff7;border:2px solid #00c87a;}
+.result.review{background:#fffbeb;border:2px solid #f5c518;}
+.result.maybe{background:#fdf4ff;border:2px solid #c084fc;}
+.result.blocked{background:#fff5f5;border:2px solid #e94560;}
+.res-title{font-size:16px;font-weight:800;margin-bottom:4px;}
+.result.approved .res-title{color:#00874f;}
+.result.review .res-title{color:#92400e;}
+.result.maybe .res-title{color:#7e22ce;}
+.result.blocked .res-title{color:#c0392b;}
+.res-sub{font-size:11px;color:#888;margin-bottom:12px;}
+.score-bar{height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden;margin:8px 0;}
+.score-fill{height:100%;border-radius:4px;transition:width 0.8s;}
+.score-lbl{display:flex;justify-content:space-between;font-size:10px;color:#888;}
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.chip{background:rgba(0,0,0,0.04);border-radius:8px;padding:8px 10px;}
+.chip-k{font-size:9px;color:#aaa;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;}
+.chip-v{font-size:12px;font-weight:700;color:#333;margin-top:2px;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="card-header">
+    <div class="shield">🛡️</div>
+    <div class="ht"><h1>Sentinel Pay</h1><p>SECURE PAYMENT GATEWAY · AI FRAUD PROTECTION</p></div>
+    <div class="sbadge"><div class="sdot"></div><span class="stext">SECURED</span></div>
+  </div>
+  <div class="body">
+    <!-- Steps -->
+    <div class="steps">
+      <div class="step active" id="s1"><div class="snum">1</div><div class="slabel">Details</div></div>
+      <div class="sline" id="l1"></div>
+      <div class="step inactive" id="s2"><div class="snum">2</div><div class="slabel">Risk</div></div>
+      <div class="sline" id="l2"></div>
+      <div class="step inactive" id="s3"><div class="snum">3</div><div class="slabel">Result</div></div>
+    </div>
+
+    <!-- Customer info preview -->
+    <div class="cust-info" id="cust-preview">
+      <div class="cavatar" id="c-avatar">?</div>
+      <div>
+        <div class="cname" id="c-name">—</div>
+        <div class="cmeta" id="c-meta">—</div>
+        <div class="cavg" id="c-avg">—</div>
+      </div>
+    </div>
+
+    <div class="sec-label">Payment Details</div>
+
+    <div class="frow">
+      <div class="fg">
+        <label>Customer Name</label>
+        <select id="cust-sel" onchange="onCustChange()">
+          <option value="">— Select Customer —</option>
+        </select>
+      </div>
+    </div>
+    <div class="frow frow2">
+      <div class="fg">
+        <label>Payment Type</label>
+        <select id="pay-type">
+          <option>Credit Card</option><option>Debit Card</option>
+          <option>UPI</option><option>Net Banking</option><option>Wallet</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Merchant Category</label>
+        <select id="merchant">
+          <option>Groceries</option><option>Electronics</option><option>Travel</option>
+          <option>Food &amp; Dining</option><option>Clothing</option><option>Healthcare</option>
+          <option>Entertainment</option><option>Education</option><option>Fuel</option>
+          <option>Jewelry</option><option>Crypto Exchange</option><option>Casino</option>
+        </select>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg">
+        <label>Amount (₹)</label>
+        <input type="number" id="amount" value="2500" oninput="onAmtChange()"/>
+      </div>
+    </div>
+    <div class="amt-card">
+      <div>
+        <div style="font-size:10px;color:#aaa;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;">Transaction Amount</div>
+        <div class="amt-val" id="amt-display">₹ 2,500</div>
+        <div class="amt-ratio" id="ratio-display">Select a customer to see ratio</div>
+      </div>
+      <div style="font-size:28px;">💳</div>
+    </div>
+
+    <!-- Risk Factors -->
+    <div class="risk-box">
+      <div class="risk-hdr"><span style="font-size:16px;">⚠️</span><div class="risk-title">RISK FACTORS (For Demo Testing)</div></div>
+      <div class="toggles">
+        <div class="tog" id="t-vpn" onclick="toggleRisk('t-vpn','cb-vpn')"><div class="tog-icon">🔒</div><div class="tog-label">VPN / Proxy</div><input type="checkbox" id="cb-vpn" style="display:none"/></div>
+        <div class="tog" id="t-dev" onclick="toggleRisk('t-dev','cb-dev')"><div class="tog-icon">📱</div><div class="tog-label">New Device</div><input type="checkbox" id="cb-dev" style="display:none"/></div>
+        <div class="tog" id="t-intl" onclick="toggleRisk('t-intl','cb-intl')"><div class="tog-icon">🌍</div><div class="tog-label">Intl. Txn</div><input type="checkbox" id="cb-intl" style="display:none"/></div>
+        <div class="tog" id="t-upi" onclick="toggleRisk('t-upi','cb-upi')"><div class="tog-icon">📲</div><div class="tog-label">New UPI Payee</div><input type="checkbox" id="cb-upi" style="display:none"/></div>
+        <div class="tog" id="t-ftp" onclick="toggleRisk('t-ftp','cb-ftp')"><div class="tog-icon">👤</div><div class="tog-label">First Time Payee</div><input type="checkbox" id="cb-ftp" style="display:none"/></div>
+        <div class="tog" id="t-odd" onclick="toggleRisk('t-odd','cb-odd')"><div class="tog-icon">🌙</div><div class="tog-label">Odd Hour</div><input type="checkbox" id="cb-odd" style="display:none"/></div>
+      </div>
+      <div class="sliders">
+        <div class="sl-grp">
+          <label>Hour (0–23)</label>
+          <input type="range" id="sl-hour" min="0" max="23" value="14" oninput="onHour()"/>
+          <div class="sl-val" id="v-hour">14:00</div>
+        </div>
+        <div class="sl-grp">
+          <label>Velocity (txns/hr)</label>
+          <input type="range" id="sl-vel" min="1" max="20" value="2" oninput="onVel()"/>
+          <div class="sl-val" id="v-vel">2</div>
+        </div>
+        <div class="sl-grp">
+          <label>Failed Attempts</label>
+          <input type="range" id="sl-fail" min="0" max="5" value="0" oninput="onFail()"/>
+          <div class="sl-val" id="v-fail">0</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="pay-btn" id="pay-btn" onclick="processPayment()">🔐 Process Payment</button>
+    <div class="result" id="result"></div>
+  </div>
+</div>
+
+<script>
+const CUSTOMERS = [{"customer_id": "CUST0001", "customer_name": "Aarav Sharma", "bank": "Kotak Bank", "card_number": "4211 7550 0265 7744", "upi_id": "aarav45@okaxis", "user_avg_amount": 1292.93, "preferred_payment": "Debit Card"}, {"customer_id": "CUST0002", "customer_name": "Ishaan Patel", "bank": "PNB", "card_number": "5086 8759 3586 8570", "upi_id": "ishaan39@ybl", "user_avg_amount": 4357.75, "preferred_payment": "Net Banking"}, {"customer_id": "CUST0003", "customer_name": "Priya Singh", "bank": "Yes Bank", "card_number": "5229 6617 1396 5687", "upi_id": "priya39@okaxis", "user_avg_amount": 6757.37, "preferred_payment": "UPI"}, {"customer_id": "CUST0004", "customer_name": "Ananya Kumar", "bank": "PNB", "card_number": "4861 1757 4539 1478", "upi_id": "ananya29@paytm", "user_avg_amount": 26320.92, "preferred_payment": "Wallet"}, {"customer_id": "CUST0005", "customer_name": "Rohan Gupta", "bank": "HDFC Bank", "card_number": "5618 7732 1077 9751", "upi_id": "rohan90@ybl", "user_avg_amount": 21305.84, "preferred_payment": "Debit Card"}, {"customer_id": "CUST0006", "customer_name": "Neha Mehta", "bank": "Bank of Baroda", "card_number": "4098 8308 9040 7714", "upi_id": "neha80@paytm", "user_avg_amount": 24078.1, "preferred_payment": "UPI"}, {"customer_id": "CUST0007", "customer_name": "Vikram Joshi", "bank": "Yes Bank", "card_number": "5451 2352 2062 9802", "upi_id": "vikram95@icici", "user_avg_amount": 39807.43, "preferred_payment": "Debit Card"}, {"customer_id": "CUST0008", "customer_name": "Shreya Shah", "bank": "PNB", "card_number": "4348 0660 7811 5114", "upi_id": "shreya19@icici", "user_avg_amount": 4148.15, "preferred_payment": "Wallet"}, {"customer_id": "CUST0009", "customer_name": "Arjun Verma", "bank": "Axis Bank", "card_number": "4142 4039 2744 9957", "upi_id": "arjun29@paytm", "user_avg_amount": 38769.15, "preferred_payment": "Credit Card"}, {"customer_id": "CUST0010", "customer_name": "Pooja Nair", "bank": "SBI", "card_number": "4058 0084 9550 0653", "upi_id": "pooja43@paytm", "user_avg_amount": 23491.85, "preferred_payment": "Debit Card"}, {"customer_id": "CUST0011", "customer_name": "Rahul Reddy", "bank": "ICICI Bank", "card_number": "5065 0551 3022 4539", "upi_id": "rahul93@sbi", "user_avg_amount": 18451.82, "preferred_payment": "UPI"}, {"customer_id": "CUST0012", "customer_name": "Sunita Rao", "bank": "SBI", "card_number": "4267 2624 9804 2076", "upi_id": "sunita43@paytm", "user_avg_amount": 35621.59, "preferred_payment": "Credit Card"}, {"customer_id": "CUST0013", "customer_name": "Deepak Iyer", "bank": "Yes Bank", "card_number": "4511 3878 8221 7846", "upi_id": "deepak29@paytm", "user_avg_amount": 21959.93, "preferred_payment": "Net Banking"}, {"customer_id": "CUST0014", "customer_name": "Kavya Pillai", "bank": "ICICI Bank", "card_number": "4304 1938 8263 2073", "upi_id": "kavya75@icici", "user_avg_amount": 10892.19, "preferred_payment": "Debit Card"}, {"customer_id": "CUST0015", "customer_name": "Manish Das", "bank": "PNB", "card_number": "5374 9181 0458 6971", "upi_id": "manish65@okaxis", "user_avg_amount": 1818.81, "preferred_payment": "Wallet"}, {"customer_id": "CUST0016", "customer_name": "Riya Bhatt", "bank": "Yes Bank", "card_number": "5421 4969 6350 2456", "upi_id": "riya69@icici", "user_avg_amount": 26775.65, "preferred_payment": "Credit Card"}, {"customer_id": "CUST0017", "customer_name": "Sanjay Mishra", "bank": "Yes Bank", "card_number": "5092 3810 9674 8573", "upi_id": "sanjay61@paytm", "user_avg_amount": 20763.44, "preferred_payment": "Net Banking"}, {"customer_id": "CUST0018", "customer_name": "Anjali Tiwari", "bank": "Bank of Baroda", "card_number": "4028 4869 5986 7585", "upi_id": "anjali30@icici", "user_avg_amount": 7282.7, "preferred_payment": "Debit Card"}, {"customer_id": "CUST0019", "customer_name": "Amit Pandey", "bank": "Kotak Bank", "card_number": "5238 0131 2434 0837", "upi_id": "amit99@okaxis", "user_avg_amount": 17762.94, "preferred_payment": "UPI"}, {"customer_id": "CUST0020", "customer_name": "Divya Agarwal", "bank": "PNB", "card_number": "5577 8424 3677 8995", "upi_id": "divya60@sbi", "user_avg_amount": 34181.88, "preferred_payment": "Debit Card"}, {"customer_id": "CUST0021", "customer_name": "Shivam Choudhary", "bank": "Kotak Bank", "card_number": "5323 7378 2005 9367", "upi_id": "shivam93@okaxis", "user_avg_amount": 7514.64, "preferred_payment": "Wallet"}, {"customer_id": "CUST0022", "customer_name": "Nisha Bajaj", "bank": "Bank of Baroda", "card_number": "4652 6716 7189 1036", "upi_id": "nisha58@icici", "user_avg_amount": 9770.23, "preferred_payment": "Debit Card"}, {"customer_id": "CUST0023", "customer_name": "Karan Malhotra", "bank": "Kotak Bank", "card_number": "4861 9734 3538 8196", "upi_id": "karan68@paytm", "user_avg_amount": 27978.56, "preferred_payment": "Net Banking"}, {"customer_id": "CUST0024", "customer_name": "Meera Kapoor", "bank": "Kotak Bank", "card_number": "5329 2475 6343 4322", "upi_id": "meera86@ybl", "user_avg_amount": 33081.66, "preferred_payment": "Net Banking"}, {"customer_id": "CUST0025", "customer_name": "Tarun Bose", "bank": "Axis Bank", "card_number": "5664 7026 3545 4737", "upi_id": "tarun44@ybl", "user_avg_amount": 22340.5, "preferred_payment": "Wallet"}, {"customer_id": "CUST0026", "customer_name": "Simran Saxena", "bank": "Bank of Baroda", "card_number": "4257 5982 3371 0029", "upi_id": "simran91@icici", "user_avg_amount": 7904.18, "preferred_payment": "UPI"}, {"customer_id": "CUST0027", "customer_name": "Varun Sinha", "bank": "Kotak Bank", "card_number": "4948 4060 1539 1767", "upi_id": "varun38@sbi", "user_avg_amount": 38630.26, "preferred_payment": "UPI"}, {"customer_id": "CUST0028", "customer_name": "Preeti Khanna", "bank": "ICICI Bank", "card_number": "4922 6110 0452 2774", "upi_id": "preeti97@paytm", "user_avg_amount": 24502.35, "preferred_payment": "Wallet"}, {"customer_id": "CUST0029", "customer_name": "Nikhil Dubey", "bank": "Kotak Bank", "card_number": "4801 3752 1669 5400", "upi_id": "nikhil65@ybl", "user_avg_amount": 26011.1, "preferred_payment": "Wallet"}, {"customer_id": "CUST0030", "customer_name": "Sakshi Tyagi", "bank": "Kotak Bank", "card_number": "4571 5429 4894 4311", "upi_id": "sakshi62@icici", "user_avg_amount": 39983.02, "preferred_payment": "UPI"}, {"customer_id": "CUST0031", "customer_name": "Harsh Yadav", "bank": "PNB", "card_number": "5880 8405 6440 2128", "upi_id": "harsh72@okaxis", "user_avg_amount": 13133.97, "preferred_payment": "UPI"}, {"customer_id": "CUST0032", "customer_name": "Swati Shukla", "bank": "ICICI Bank", "card_number": "4281 9619 2744 4411", "upi_id": "swati86@sbi", "user_avg_amount": 22224.38, "preferred_payment": "UPI"}, {"customer_id": "CUST0033", "customer_name": "Akash Tripathi", "bank": "Kotak Bank", "card_number": "5785 6844 3739 8923", "upi_id": "akash62@okaxis", "user_avg_amount": 32875.81, "preferred_payment": "Net Banking"}, {"customer_id": "CUST0034", "customer_name": "Pallavi Bansal", "bank": "Yes Bank", "card_number": "4884 5474 6149 3668", "upi_id": "pallavi96@sbi", "user_avg_amount": 5311.98, "preferred_payment": "Wallet"}, {"customer_id": "CUST0035", "customer_name": "Vishal Goel", "bank": "Kotak Bank", "card_number": "4974 0684 6907 2315", "upi_id": "vishal82@paytm", "user_avg_amount": 9620.38, "preferred_payment": "Net Banking"}, {"customer_id": "CUST0036", "customer_name": "Komal Arora", "bank": "Kotak Bank", "card_number": "4468 4250 9929 6439", "upi_id": "komal71@okaxis", "user_avg_amount": 9517.88, "preferred_payment": "Credit Card"}, {"customer_id": "CUST0037", "customer_name": "Gaurav Sethi", "bank": "HDFC Bank", "card_number": "5978 9728 2127 7610", "upi_id": "gaurav90@okaxis", "user_avg_amount": 11196.87, "preferred_payment": "Debit Card"}, {"customer_id": "CUST0038", "customer_name": "Seema Chopra", "bank": "Yes Bank", "card_number": "4711 5959 8284 8731", "upi_id": "seema19@paytm", "user_avg_amount": 36412.22, "preferred_payment": "Credit Card"}, {"customer_id": "CUST0039", "customer_name": "Ritesh Lal", "bank": "ICICI Bank", "card_number": "5466 5891 2085 9208", "upi_id": "ritesh99@ybl", "user_avg_amount": 852.57, "preferred_payment": "UPI"}, {"customer_id": "CUST0040", "customer_name": "Bhavna Thakur", "bank": "Axis Bank", "card_number": "5814 6794 7140 4490", "upi_id": "bhavna57@paytm", "user_avg_amount": 4909.98, "preferred_payment": "Wallet"}, {"customer_id": "CUST0041", "customer_name": "Suresh Naik", "bank": "Kotak Bank", "card_number": "5118 4665 0721 5072", "upi_id": "suresh37@paytm", "user_avg_amount": 2703.84, "preferred_payment": "Debit Card"}, {"customer_id": "CUST0042", "customer_name": "Lata Kulkarni", "bank": "ICICI Bank", "card_number": "5600 7231 0757 4751", "upi_id": "lata74@paytm", "user_avg_amount": 32001.0, "preferred_payment": "Credit Card"}, {"customer_id": "CUST0043", "customer_name": "Pranav Desai", "bank": "PNB", "card_number": "5649 0060 2653 9546", "upi_id": "pranav22@okaxis", "user_avg_amount": 33937.75, "preferred_payment": "Debit Card"}, {"customer_id": "CUST0044", "customer_name": "Asha Patil", "bank": "Bank of Baroda", "card_number": "5373 3296 4004 7310", "upi_id": "asha81@sbi", "user_avg_amount": 13755.59, "preferred_payment": "Credit Card"}, {"customer_id": "CUST0045", "customer_name": "Mohit Hegde", "bank": "Yes Bank", "card_number": "5151 4835 1224 5766", "upi_id": "mohit81@okaxis", "user_avg_amount": 24136.28, "preferred_payment": "UPI"}, {"customer_id": "CUST0046", "customer_name": "Geeta Menon", "bank": "SBI", "card_number": "5854 1607 2433 7750", "upi_id": "geeta16@paytm", "user_avg_amount": 14235.63, "preferred_payment": "UPI"}, {"customer_id": "CUST0047", "customer_name": "Vivek Varma", "bank": "Bank of Baroda", "card_number": "5642 5316 5532 9029", "upi_id": "vivek27@ybl", "user_avg_amount": 26578.97, "preferred_payment": "Net Banking"}, {"customer_id": "CUST0048", "customer_name": "Rekha Rajan", "bank": "Axis Bank", "card_number": "4588 0800 9855 7410", "upi_id": "rekha51@paytm", "user_avg_amount": 5428.67, "preferred_payment": "Credit Card"}, {"customer_id": "CUST0049", "customer_name": "Aditya Krishnan", "bank": "Axis Bank", "card_number": "5440 8727 0651 7396", "upi_id": "aditya28@paytm", "user_avg_amount": 33826.03, "preferred_payment": "Debit Card"}, {"customer_id": "CUST0050", "customer_name": "Usha Mathur", "bank": "Bank of Baroda", "card_number": "4455 6869 3934 4675", "upi_id": "usha55@sbi", "user_avg_amount": 7332.7, "preferred_payment": "UPI"}];
+
+let selCust = null;
+
+// Populate dropdown
+(function(){
+  const sel = document.getElementById('cust-sel');
+  CUSTOMERS.forEach(function(c){
+    const o = document.createElement('option');
+    o.value = c.customer_name;
+    o.textContent = c.customer_name;
+    sel.appendChild(o);
+  });
+})();
+
+function onCustChange(){
+  const name = document.getElementById('cust-sel').value;
+  const prev = document.getElementById('cust-preview');
+  if(!name){ prev.classList.remove('show'); selCust=null; return; }
+  selCust = CUSTOMERS.find(function(c){ return c.customer_name===name; });
+  prev.classList.add('show');
+  document.getElementById('c-avatar').textContent = name[0];
+  document.getElementById('c-name').textContent = name;
+  document.getElementById('c-meta').textContent = selCust.bank + '  ·  ' + selCust.preferred_payment;
+  document.getElementById('c-avg').textContent = 'Avg spend: ₹' + selCust.user_avg_amount.toLocaleString('en-IN');
+  document.getElementById('pay-type').value = selCust.preferred_payment;
+  onAmtChange();
+}
+
+function onAmtChange(){
+  const v = parseFloat(document.getElementById('amount').value)||0;
+  document.getElementById('amt-display').textContent = '₹ ' + v.toLocaleString('en-IN');
+  if(selCust && v>0){
+    const r = (v/selCust.user_avg_amount).toFixed(2);
+    const col = r>3?'#e94560':r>1.5?'#ff8c42':'#00874f';
+    document.getElementById('ratio-display').innerHTML = 'vs customer avg: <b style="color:'+col+'">×'+r+'</b>';
+  } else {
+    document.getElementById('ratio-display').textContent = 'Select a customer to see ratio';
+  }
+}
+
+function toggleRisk(togId, cbId){
+  const tog = document.getElementById(togId);
+  const cb  = document.getElementById(cbId);
+  cb.checked = !cb.checked;
+  tog.classList.toggle('on', cb.checked);
+}
+
+function onHour(){
+  const h = parseInt(document.getElementById('sl-hour').value);
+  document.getElementById('v-hour').textContent = String(h).padStart(2,'0')+':00';
+  const isOdd = h<6||h>22;
+  document.getElementById('cb-odd').checked = isOdd;
+  document.getElementById('t-odd').classList.toggle('on', isOdd);
+}
+function onVel(){ document.getElementById('v-vel').textContent = document.getElementById('sl-vel').value; }
+function onFail(){ document.getElementById('v-fail').textContent = document.getElementById('sl-fail').value; }
+
+async function processPayment(){
+  const btn = document.getElementById('pay-btn');
+  const res = document.getElementById('result');
+  btn.disabled=true; btn.textContent='⏳ Processing...';
+  res.classList.remove('show');
+  document.getElementById('s2').className='step active';
+  document.getElementById('l1').className='sline done';
+
+  const h   = parseInt(document.getElementById('sl-hour').value);
+  const vel = parseInt(document.getElementById('sl-vel').value);
+  const data = {
+    customer_name:      document.getElementById('cust-sel').value||'Demo User',
+    payment_type:       document.getElementById('pay-type').value,
+    merchant_category:  document.getElementById('merchant').value,
+    amount:             parseFloat(document.getElementById('amount').value)||0,
+    hour:               h,
+    velocity:           vel,
+    failed_attempts:    parseInt(document.getElementById('sl-fail').value),
+    mins_since_last_txn: Math.max(1, Math.round(120/vel)),
+    is_vpn:             document.getElementById('cb-vpn').checked?1:0,
+    is_new_device:      document.getElementById('cb-dev').checked?1:0,
+    is_intl_txn:        document.getElementById('cb-intl').checked?1:0,
+    is_upi_new_payee:   document.getElementById('cb-upi').checked?1:0,
+    is_first_time_payee:document.getElementById('cb-ftp').checked?1:0,
+  };
+
+  try{
+    const r = await fetch('/process-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    const d = await r.json();
+    if(d.success) showResult(d);
+    else alert('Error: '+d.error);
+  }catch(e){ alert('Cannot connect. Is app.py running on port 5000?'); }
+
+  btn.disabled=false; btn.textContent='🔐 Process Payment';
+  document.getElementById('s2').className='step done';
+  document.getElementById('s3').className='step active';
+  document.getElementById('l2').className='sline done';
+}
+
+function showResult(res){
+  const f=res.fraud_result, sc=f.fraud_score;
+  const el=document.getElementById('result');
+  let cls,icon,title,sub,col;
+  if(f.status==='BLOCKED'){cls='blocked';icon='🚫';title='TRANSACTION BLOCKED';sub='High fraud risk. Transaction declined.';col='#e94560';}
+  else if(f.status==='MIGHT_BE_FRAUD'){cls='maybe';icon='⚠️';title='SUSPICIOUS — UNDER REVIEW';sub='Score 50–70. Additional verification recommended.';col='#c084fc';}
+  else if(f.status==='REVIEW'){cls='maybe';icon='🔍';title='UNDER REVIEW';sub='Score 35–50. Manual verification recommended.';col='#f5c518';}
+  else{cls='approved';icon='✅';title='PAYMENT APPROVED';sub='No fraud indicators detected. Transaction processed.';col='#00c87a';}
+  el.className='result '+cls+' show';
+  el.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:26px;">'+icon+'</span><div><div class="res-title">'+title+'</div><div class="res-sub">'+sub+'</div></div></div>'+
+    '<div class="score-lbl"><span>Fraud Risk Score</span><span style="font-weight:700;color:'+col+';">'+sc+' / 100</span></div>'+
+    '<div class="score-bar"><div class="score-fill" style="width:'+sc+'%;background:'+col+';"></div></div>'+
+    '<div class="chips">'+
+      '<div class="chip"><div class="chip-k">Transaction ID</div><div class="chip-v" style="font-size:10px;">'+res.transaction_id+'</div></div>'+
+      '<div class="chip"><div class="chip-k">Risk Level</div><div class="chip-v" style="color:'+col+';">'+f.risk_level+'</div></div>'+
+      '<div class="chip"><div class="chip-k">Confidence</div><div class="chip-v">'+(f.fraud_probability*100).toFixed(1)+'%</div></div>'+
+      '<div class="chip"><div class="chip-k">Timestamp</div><div class="chip-v" style="font-size:10px;">'+res.timestamp+'</div></div>'+
+    '</div>';
+}
+
+onHour(); onVel(); onFail(); onAmtChange();
+</script>
+</body>
+</html>
